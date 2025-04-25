@@ -1,115 +1,85 @@
 import streamlit as st
-import pandas as pd
-from transformers import T5Tokenizer, T5ForConditionalGeneration
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
-from io import BytesIO
+import io
 import base64
-import os
 
-# Initialize the model and tokenizer
-@st.cache_resource
-def load_model():
-    tokenizer = T5Tokenizer.from_pretrained("t5-small")
-    model = T5ForConditionalGeneration.from_pretrained("t5-small")
-    return tokenizer, model
+# -------------------- Helper Functions --------------------
 
-tokenizer, model = load_model()
+def create_poster(title, content, theme="default"):
+    width, height = 600, 900
+    bg_color, text_color, accent_color = (255, 255, 255), (0, 0, 0), (0, 0, 0)
 
-# Sample data
-data = {
-    "title": ["Health", "Tech", "Travel"],
-    "description": [
-        "Health, a state of complete well-being, transcends the mere absence of disease...",
-        "Technology is advancing at an unprecedented pace, shaping industries and everyday life...",
-        "Travel is undergoing a transformation as sustainability and personalization become key trends..."
-    ]
-}
-df = pd.DataFrame(data)
-
-def generate_blog_content(topic, description):
-    """Generate blog content using T5 model"""
-    input_text = f"write a 100-word blog post about {topic}: {description}"
-    input_ids = tokenizer.encode(input_text, return_tensors="pt", max_length=512, truncation=True)
-    outputs = model.generate(input_ids, max_length=200, num_beams=4, early_stopping=True)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-def create_poster(title, content, theme="health", small=True):
-    base_width, base_height = 600, 900
-    scale_factor = 0.75 if small else 1
-    width, height = int(base_width * scale_factor), int(base_height * scale_factor)
-
-    # Theme colors
+    # Thematic colors
     if theme == "health":
-        bg_color = (240, 248, 255)
-        text_color = (0, 100, 0)
-        accent_color = (0, 128, 0)
+        bg_color = (240, 248, 255)      # AliceBlue
+        text_color = (0, 100, 0)        # DarkGreen
+        accent_color = (0, 128, 0)      # Green
     elif theme == "tech":
-        bg_color = (240, 240, 240)
-        text_color = (25, 25, 112)
-        accent_color = (0, 0, 128)
-    else:
-        bg_color = (255, 248, 220)
-        text_color = (139, 69, 19)
-        accent_color = (165, 42, 42)
+        bg_color = (245, 245, 245)      # Light Gray
+        text_color = (25, 25, 112)      # MidnightBlue
+        accent_color = (0, 0, 128)      # Navy
+    elif theme == "travel":
+        bg_color = (255, 248, 220)      # Cornsilk
+        text_color = (139, 69, 19)      # SaddleBrown
+        accent_color = (165, 42, 42)    # Brown
 
+    # Create blank image
     img = Image.new("RGB", (width, height), bg_color)
     draw = ImageDraw.Draw(img)
 
-    border_size = int(20 * scale_factor)
-    draw.rectangle([border_size, border_size, width-border_size, height-border_size],
-                   outline=accent_color, width=int(3 * scale_factor))
-
+    # Load font
     try:
-        title_font = ImageFont.truetype("arialbd.ttf", int(40 * scale_factor))
-        subtitle_font = ImageFont.truetype("arial.ttf", int(20 * scale_factor))
-        body_font = ImageFont.truetype("arial.ttf", int(16 * scale_factor))
+        title_font = ImageFont.truetype("arialbd.ttf", 40)
+        body_font = ImageFont.truetype("arial.ttf", 18)
     except IOError:
         title_font = ImageFont.load_default()
-        subtitle_font = ImageFont.load_default()
         body_font = ImageFont.load_default()
 
-    draw.text((width//2, int(75 * scale_factor)), title, fill=text_color, font=title_font, anchor="mm")
-    subtitle = f"Latest Trends in {title}"
-    draw.text((width//2, int(125 * scale_factor)), subtitle, fill=accent_color, font=subtitle_font, anchor="mm")
+    # Title
+    draw.text((width // 2, 80), title, fill=text_color, font=title_font, anchor="mm")
 
-    text_width = width - 2 * int(50 * scale_factor)
+    # Subtitle
+    subtitle = f"Topic: {title}"
+    draw.text((width // 2, 130), subtitle, fill=accent_color, font=body_font, anchor="mm")
+
+    # Wrap content
+    margin = 50
+    max_width = width - 2 * margin
     char_width = body_font.getlength("A")
-    max_chars_per_line = int(text_width // char_width)
-    lines = textwrap.wrap(content, width=max_chars_per_line)
-    y_position = int(175 * scale_factor)
-    line_height = int(20 * scale_factor)
+    max_chars = int(max_width // char_width)
+    lines = textwrap.wrap(content, width=max_chars)
 
+    y = 180
     for line in lines:
-        draw.text((int(50 * scale_factor), y_position), line, fill=text_color, font=body_font)
-        y_position += line_height
+        draw.text((margin, y), line, fill=text_color, font=body_font)
+        y += 25
 
-    footer_height = int(50 * scale_factor)
-    draw.rectangle([0, height-footer_height, width, height], fill=accent_color)
-    draw.text((width//2, height-int(25 * scale_factor)), "Generated by AI Blog Poster",
-              fill=bg_color, font=subtitle_font, anchor="mm")
+    # Footer
+    draw.rectangle([0, height-50, width, height], fill=accent_color)
+    draw.text((width // 2, height-25), "Generated by AI Poster App", fill=bg_color, font=body_font, anchor="mm")
 
     return img
 
-def image_download_link(img, filename):
-    buffered = BytesIO()
+def get_image_download_link(img, filename="poster.png"):
+    buffered = io.BytesIO()
     img.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-
-    href = f'<a href="data:image/png;base64,{img_str}" download="{filename}">📥 Download Poster</a>'
+    b64 = base64.b64encode(buffered.getvalue()).decode()
+    href = f'<a href="data:image/png;base64,{b64}" download="{filename}">📥 Download Poster</a>'
     return href
 
-# Streamlit UI
-st.title("🧠 AI Blog Poster Generator")
-st.write("This app generates a mini blog post and poster using T5 and Streamlit.")
+# -------------------- Streamlit UI --------------------
 
-selected_topic = st.selectbox("Choose a topic", df["title"])
+st.title("🖼️ Poster Generator App")
+st.write("Generate a poster image from a topic and short text.")
+
+title = st.text_input("Enter Poster Title", "Health")
+content = st.text_area("Enter Poster Content", "Health is wealth. Eating well, exercising regularly, and sleeping adequately form the foundation of a healthy lifestyle.")
+theme = st.selectbox("Select Theme", ["default", "health", "tech", "travel"])
 
 if st.button("Generate Poster"):
-    selected_row = df[df["title"] == selected_topic].iloc[0]
-    blog_content = generate_blog_content(selected_row["title"], selected_row["description"])
-    theme = selected_row["title"].lower()
-    poster = create_poster(selected_row["title"], blog_content, theme=theme, small=True)
+    poster_img = create_poster(title, content, theme)
+    st.image(poster_img, caption="Your Poster", use_column_width=True)
 
-    st.image(poster, caption=f"{selected_topic} Poster", use_column_width=True)
-    st.markdown(image_download_link(poster, f"{theme}_poster.png"), unsafe_allow_html=True)
+    # Show download link
+    st.markdown(get_image_download_link(poster_img), unsafe_allow_html=True)
