@@ -7,7 +7,7 @@ import base64
 # -------------------- Helper Functions --------------------
 
 def create_poster(title, content, theme="modern"):
-    width, height = 400, 600  # Smaller poster size
+    width, height = 400, 400  # Smaller poster height (adjusted to 400px)
     img = Image.new("RGB", (width, height), (255, 255, 255))
     draw = ImageDraw.Draw(img)
 
@@ -51,28 +51,28 @@ def create_poster(title, content, theme="modern"):
 
     # Load font
     try:
-        title_font = ImageFont.truetype("arialbd.ttf", 36)  # Smaller font size
-        subtitle_font = ImageFont.truetype("arial.ttf", 18)  # Smaller font size
-        body_font = ImageFont.truetype("arial.ttf", 14)  # Smaller font size
+        title_font = ImageFont.truetype("arialbd.ttf", 24)  # Adjusted for smaller height
+        subtitle_font = ImageFont.truetype("arial.ttf", 14)  # Adjusted for smaller height
+        body_font = ImageFont.truetype("arial.ttf", 12)  # Adjusted for smaller height
     except IOError:
         title_font = ImageFont.load_default()
         subtitle_font = ImageFont.load_default()
         body_font = ImageFont.load_default()
 
     # Draw title with shadow
-    title_y = 60
+    title_y = 40
     draw.text((width // 2 + 2, title_y + 2), title, font=title_font, fill=(0, 0, 0), anchor="mm")
     draw.text((width // 2, title_y), title, font=title_font, fill=t["text"], anchor="mm")
 
     # Subtitle
     subtitle = f"Presented by AI Poster Generator"
-    subtitle_y = title_y + 40
+    subtitle_y = title_y + 30
     draw.text((width // 2 + 1, subtitle_y + 1), subtitle, font=subtitle_font, fill=(0, 0, 0), anchor="mm")
     draw.text((width // 2, subtitle_y), subtitle, font=subtitle_font, fill=t["accent"], anchor="mm")
 
     # Body text
-    margin = 30
-    text_top = subtitle_y + 50
+    margin = 20
+    text_top = subtitle_y + 40
     text_width = width - 2 * margin
     char_width = body_font.getlength("A")
     max_chars = int(text_width // char_width)
@@ -81,12 +81,12 @@ def create_poster(title, content, theme="modern"):
     y = text_top
     for line in lines:
         draw.text((margin, y), line, font=body_font, fill=t["text"])
-        y += 20
+        y += 16  # Reduced line height to fit within smaller space
 
     # Footer
     footer_text = "www.generatedposter.ai"
-    draw.rectangle([0, height - 40, width, height], fill=(0, 0, 0))
-    draw.text((width // 2, height - 25), footer_text, font=subtitle_font, fill=(255, 255, 255), anchor="mm")
+    draw.rectangle([0, height - 30, width, height], fill=(0, 0, 0))
+    draw.text((width // 2, height - 20), footer_text, font=subtitle_font, fill=(255, 255, 255), anchor="mm")
 
     return img
 
