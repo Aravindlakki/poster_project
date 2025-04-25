@@ -1,6 +1,4 @@
 streamlit
-pandas
 pillow
-transformers
-torch==2.0.1
+
 
