@@ -2,4 +2,5 @@ streamlit
 pandas
 pillow
 transformers
-torch
+torch==2.0.1
+
